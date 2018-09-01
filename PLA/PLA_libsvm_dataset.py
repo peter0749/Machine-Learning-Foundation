@@ -15,7 +15,7 @@ class PLA(object):
         self.shuffle = shuffle
         self.verbose = verbose
         self.eta = eta
-        self.Wxb = np.zeros((1,x_dim+1), dtype=np.float32) # (1, 4)
+        self.Wxb = np.random.normal(0, np.sqrt(2/(x_dim+1)), size=(1,x_dim+1)) # initialize Wxb using he-normal
     def predict(self, x, pocket=False):
         X = np.append(x, [1], axis=-1)[...,np.newaxis]
         pred = np.squeeze(self.Wxb @ X)
@@ -68,8 +68,6 @@ class PocketPLA(PLA):
                 if p!=y: # wrong
                     self.Wxb = self.Wxb + (self.eta*y*np.append(x, [1], axis=-1))[np.newaxis]
                     updates += 1
-                    if self.verbose:
-                        print('iteration {:d}: '.format(updates), self.Wxb)
                     break
             errors = 0
             for x, y in zip(Xs, Ys):
@@ -78,6 +76,8 @@ class PocketPLA(PLA):
             if errors < last_errors:
                 last_errors = errors
                 self.Wxb_pocket = self.Wxb.copy()
+                if self.verbose:
+                    print('iteration {:d}: update pocket weights: err: {:.2f}'.format(updates, errors/len(Xs)))
             if updates>=self.pocket_maxiter:
                 return last_errors
 
