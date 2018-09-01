@@ -1,14 +1,7 @@
-
 # coding: utf-8
 
-# In[1]:
-
-import sys
 import numpy as np
-
-
-# In[2]:
-
+import matplotlib.pyplot as plt
 
 class PLA(object):
     def __init__(self, x_dim, eta=1.0, shuffle=False, verbose=False):
@@ -36,15 +29,16 @@ class PLA(object):
                 updates += 1
                 if self.verbose:
                     print('iteration {:d}: '.format(updates), self.Wxb)
+                    x2_start = (-self.Wxb[0,0]*x1_min-self.Wxb[0,-1]) / self.Wxb[0,1]
+                    x2_end   = (-self.Wxb[0,0]*x1_max-self.Wxb[0,-1]) / self.Wxb[0,1]
+                    if 'line' in locals(): line.pop(0).remove()
+                    line = plt.plot([x1_min, x1_max], [x2_start, x2_end], color='black')
+                    plt.pause(0.05)
                 correct_cnt = 0
             else:
                 correct_cnt += 1
             i = (i+1)%len(Xs)
         return updates
-
-
-# In[3]:
-
 
 class PocketPLA(PLA):
     def __init__(self, x_dim, eta=1.0, pocket_maxiter=None, shuffle=False, verbose=False):
@@ -68,6 +62,11 @@ class PocketPLA(PLA):
                 if p!=y: # wrong
                     self.Wxb = self.Wxb + (self.eta*y*np.append(x, [1], axis=-1))[np.newaxis]
                     updates += 1
+                    x2_start = (-self.Wxb[0,0]*x1_min-self.Wxb[0,-1]) / self.Wxb[0,1]
+                    x2_end   = (-self.Wxb[0,0]*x1_max-self.Wxb[0,-1]) / self.Wxb[0,1]
+                    if 'line1' in locals(): line1.pop(0).remove()
+                    line1 = plt.plot([x1_min, x1_max], [x2_start, x2_end], color='black')
+                    plt.pause(0.05)
                     break
             errors = 0
             for x, y in zip(Xs, Ys):
@@ -78,52 +77,31 @@ class PocketPLA(PLA):
                 self.Wxb_pocket = self.Wxb.copy()
                 if self.verbose:
                     print('iteration {:d}: update pocket weights: err: {:.2f}'.format(updates, errors/len(Xs)))
+                    x2_start = (-self.Wxb[0,0]*x1_min-self.Wxb[0,-1]) / self.Wxb[0,1]
+                    x2_end   = (-self.Wxb[0,0]*x1_max-self.Wxb[0,-1]) / self.Wxb[0,1]
+                    if 'line2' in locals(): line2.pop(0).remove()
+                    line2 = plt.plot([x1_min, x1_max], [x2_start, x2_end], color='green')
+                    plt.pause(0.05)
             if updates>=self.pocket_maxiter or last_errors==0:
                 return last_errors
 
+N = 1000
+x1 = np.random.normal((-5, 10), (5,5),  size=(N,2))
+x2 = np.random.normal((10, -5), (5,3),  size=(N,2))
+x  = np.append(x1, x2, axis=0)
+y  = np.append(np.ones(N), -np.ones(N))
+idx = np.random.permutation(len(x))
+x, y = x[idx], y[idx]
+x1_min, x1_max = x1.min(), x1.max()
+x2_min, x2_max = x2.min(), x2.max()
 
-# In[4]:
+plt.scatter(x1[...,0], x1[...,1], color='blue', marker='o')
+plt.scatter(x2[...,0], x2[...,1], color='red', marker='x')
+plt.xlim(x1_min, x1_max)
+plt.ylim(x2_min, x2_max)
 
-
-def data_reader(filepath):
-    with open(filepath, 'r') as fp:
-        x = []
-        y = []
-        for line in fp:
-            split_line = line.split()
-            y.append(split_line[0])
-            feature = np.asarray([f.split(':')[1] for f in split_line[1:]], dtype=np.float32)
-            x.append(feature)
-
-    x = np.asarray(x, dtype=np.float32)
-    y = np.asarray(y, dtype=np.int32)
-    labels = sorted(list(set(y)))
-    assert len(labels)==2
-    y[y==labels[0]] =-1
-    y[y==labels[1]] = 1
-    y = y.astype(np.int16)
-    return x, y
-
-# In[5]:
-
-train_path = str(sys.argv[1])
-test_path = str(sys.argv[2])
-max_ite    = int(sys.argv[3])
-
-# In[6]:
-
-x_train, y_train = data_reader(train_path)
-x_test, y_test = data_reader(test_path)
-
-print('x_train shape:', x_train.shape)
-print('y_train shape:', y_train.shape)
-print('x_test shape:', x_test.shape)
-print('y_test shape:', y_test.shape)
-
-pla = PocketPLA(x_train.shape[-1], pocket_maxiter=max_ite, shuffle=True, verbose=True)
-pla.train(x_train, y_train)
-preds = np.squeeze(np.asarray([pla.predict(x, pocket=True) for x in x_test]))
-err = (preds!=y_test).mean()
-print('error rate: {:.2f}'.format(err))
-print('accuracy: {:.2f}'.format(1-err))
+plt.ion()
+pla = PocketPLA(x.shape[-1], pocket_maxiter=100, shuffle=True, verbose=True)
+pla.train(x, y)
+plt.ioff(); plt.show()
 
