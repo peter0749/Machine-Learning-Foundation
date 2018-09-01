@@ -127,3 +127,9 @@ err = (preds!=y_test).mean()
 print('error rate: {:.2f}'.format(err))
 print('accuracy: {:.2f}'.format(1-err))
 
+TP = np.sum((preds==1).astype(np.bool)&(y_test==1).astype(np.bool))
+precision = TP / np.sum(preds==1)
+recall = TP / np.sum(y_test==1)
+f1 = 2*precision*recall/(precision+recall)
+print('P: {:.2f}, R: {:.2f}, F1: {:.2f}'.format(precision, recall, f1))
+
